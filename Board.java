@@ -1,18 +1,25 @@
-import java.util.Arrays;
+import javax.swing.JOptionPane;
+import java.awt.event.*;
+import java.util.*;
 
 public class Board {
     /* The board object that stores the board information and changes the board based on input */
     private int[][] boardGrid;
     private int boardSize;
 
-    Board(int size){
-        /* Initialises the board */
+    public Board(int size){
+        this.resetBoard(size);
+    }
+	
+	private void resetBoard(int size){
+		/* Initialises the board */
         boardSize = size;
         boardGrid = new int[size][size];
-    }
+		add_tile();
+	}
 
-    private int getBoardSize(){ return this.boardSize; }
-    private int[][] getBoardGrid(){ return this.boardGrid; }
+    public int getBoardSize(){ return this.boardSize; }
+    public int[][] getBoardGrid(){ return this.boardGrid; }
     private void setBoardGrid(int[][] newGrid) { this.boardGrid = newGrid; }
 
     public void add_tile(){
@@ -34,65 +41,25 @@ public class Board {
     private boolean tileIsEmpty(int y, int x){ return this.getTile(y, x) == 0;}
     private int getTile(int y, int x){ return this.getBoardGrid()[y][x]; }
 
-    public String boardBuilder(int cellSize){
-        /* displays the board to the screen */
-        StringBuilder boardString = new StringBuilder();
-        for(int[] row : this.getBoardGrid()){
-            boardString.append(" | ");
-            for(int cell : row){
-                // if the cell is empty
-                if(cell == 0){ boardString.append(rjust("", cellSize)); }
-                // numbers
-                else { boardString.append(rjust(Integer.toString(cell), cellSize)); }
-                boardString.append(" | ");
-            }
-            boardString.append("\n");
-        }
-        return boardString.toString();
-    }
-    private String rjust(String str, int length){
-        /* Put string on right of a standard sized block of spaces */
-        StringBuilder outputString = new StringBuilder();
-        outputString.append(" ".repeat(length - str.length()));     // add spaces
-        outputString.append(str);           // add string
-        return outputString.toString();
-    }
-
-    public boolean swipe(String direction, boolean apply){
+    public boolean swipe(int direction, boolean apply){
         /* changes the board based on swipe and returns if the board has changed */
         int[][] outputBoard = new int[this.getBoardSize()][this.getBoardSize()];
 
         // turn grid
         int[][] turnedGrid = new int[this.getBoardSize()][this.getBoardSize()];
+		
         switch (direction){
-            case "W":
-                // flip grid along the downwards diagonal
-                for(int i = 0; i < this.getBoardSize(); i++){
-                    for(int j = 0; j < this.getBoardSize(); j++){
-                        turnedGrid[i][j] = this.getBoardGrid()[j][i];
-                    }
-                }
+            case KeyEvent.VK_UP:
+                turnedGrid = upTurn(this.getBoardGrid());
                 break;
-            case "A":
-                // copy grid to turned grid
-                for(int i = 0; i < this.getBoardSize(); i++){
-                    System.arraycopy(this.getBoardGrid()[i], 0, turnedGrid[i], 0, this.getBoardSize());
-                }
+            case KeyEvent.VK_LEFT:
+                turnedGrid = leftTurn(this.getBoardGrid());
                 break;
-            case "S":
-                // flip along vertical axis
-                turnedGrid = new int[this.getBoardSize()][this.getBoardSize()];
-                for(int i = 0; i < this.getBoardSize(); i++){
-                    for(int j = 0; j < this.getBoardSize(); j++){
-                        turnedGrid[this.getBoardSize() - 1 - i][this.getBoardSize() - 1 - j] = this.getBoardGrid()[j][i];
-                    }
-                }
+            case KeyEvent.VK_DOWN:
+                turnedGrid = downTurn(this.getBoardGrid());
                 break;
-            case "D":
-                // flip grid along upwards diagonal
-                for(int i = 0; i < this.getBoardSize(); i++){
-                    turnedGrid[i] = this.reverseRow(this.getBoardGrid()[i].clone());
-                }
+            case KeyEvent.VK_RIGHT:
+                turnedGrid = rightTurn(this.getBoardGrid());
                 break;
         }
 
@@ -104,44 +71,82 @@ public class Board {
 
         // switch back if necessary
         switch (direction){
-            case "W":
-                // switch back
-                for(int i = 0; i < this.getBoardSize(); i++){
-                    for(int j = 0; j < this.getBoardSize(); j++){
-                        outputBoard[i][j] = turnedGridSwiped[j][i];
-                    }
-                }
+            case KeyEvent.VK_UP:
+                outputBoard = upTurn(turnedGridSwiped);
                 break;
-            case "A":
-                // switch back
-                for(int i = 0; i < this.getBoardSize(); i++){
-                    System.arraycopy(turnedGridSwiped[i], 0, outputBoard[i], 0, this.getBoardSize());
-                }
+            case KeyEvent.VK_LEFT:
+                outputBoard = leftTurn(turnedGridSwiped);
                 break;
-            case "S":
-                // switch back
-                for(int i = 0; i < this.getBoardSize(); i++){
-                    for(int j = 0; j < this.getBoardSize(); j++){
-                        outputBoard[this.getBoardSize() - 1 - i][this.getBoardSize() - 1 - j] = turnedGridSwiped[j][i];
-                    }
-                }
+            case KeyEvent.VK_DOWN:
+                outputBoard = downTurn(turnedGridSwiped);
                 break;
-            case "D":
-                // moves right, swipe reversed row and reverse back
-                for(int i = 0; i < this.getBoardSize(); i++){
-                    outputBoard[i] = this.reverseRow(turnedGridSwiped[i].clone());
-                }
+            case KeyEvent.VK_RIGHT:
+                outputBoard = rightTurn(turnedGridSwiped);
                 break;
         }
-
-        if(Arrays.deepEquals(outputBoard, this.getBoardGrid())){
-            return false;
-        } else {
-            // apply changes if requested
-            if(apply){ this.setBoardGrid(outputBoard.clone()); }
-            return true;
-        }
+		
+		// if swiped changed anything, add new tile
+		if(!Arrays.deepEquals(outputBoard, this.getBoardGrid())){
+			if(apply){
+				this.setBoardGrid(outputBoard.clone());
+				this.add_tile();
+			}
+			return true;
+		} else
+			return false;
     }
+	
+	public void gameOver(){
+		// displays game over dialog box
+		int option = JOptionPane.showConfirmDialog(null, 
+												   "No more moves. Play Again?", 
+												   "Game Over",
+												   JOptionPane.YES_NO_OPTION);
+		if(option == JOptionPane.YES_OPTION)
+			this.resetBoard(this.getBoardSize());
+	}
+	
+	// -----------------TURNING FUNCTIONS ------------------------
+	
+	private int[][] upTurn(int[][] toTurn){
+		int[][] turned = new int[this.getBoardSize()][this.getBoardSize()];
+		// flip grid along the downwards diagonal
+        for(int i = 0; i < this.getBoardSize(); i++){
+			for(int j = 0; j < this.getBoardSize(); j++){
+				turned[i][j] = toTurn[j][i];
+			}
+        }
+		return turned;
+	}
+	
+	private int[][] leftTurn(int[][] toTurn){
+		int[][] turned = new int[this.getBoardSize()][this.getBoardSize()];
+		// no change copy 2d array
+		for(int i = 0; i < this.getBoardSize(); i++){
+			System.arraycopy(toTurn[i], 0, turned[i], 0, this.getBoardSize());
+        }
+		return turned;
+	}
+	
+	private int[][] downTurn(int[][] toTurn){
+		// flip along vertical axis
+		int[][] turned = new int[this.getBoardSize()][this.getBoardSize()];
+		for(int i = 0; i < this.getBoardSize(); i++){
+			for(int j = 0; j < this.getBoardSize(); j++){
+				turned[this.getBoardSize() - 1 - i][this.getBoardSize() - 1 - j] = toTurn[j][i];
+            }
+		}
+		return turned;
+	}
+	
+	private int[][] rightTurn(int[][] toTurn){
+		// flip grid along upwards diagonal
+		int[][] turned = new int[this.getBoardSize()][this.getBoardSize()];
+        for(int i = 0; i < this.getBoardSize(); i++){
+			turned[i] = this.reverseRow(toTurn[i].clone());
+		}
+		return turned;
+	}
 
     private int[] reverseRow(int[] row){
         int start = 0;
@@ -157,6 +162,7 @@ public class Board {
     }
 
     private int[] rowSwipe(int[] row){
+		// swipes the row to the left
         int[] outputRow = new int[this.getBoardSize()];
         int outputCell = 0;
 
@@ -191,4 +197,21 @@ public class Board {
         }
         return outputRow;
     }
+	
+	public boolean movesAvailable(){
+		// check if any more moves can be done
+		int[] moves = {KeyEvent.VK_UP,
+					   KeyEvent.VK_LEFT,
+					   KeyEvent.VK_DOWN,
+					   KeyEvent.VK_RIGHT};
+					   
+		boolean available = false;
+		// checks finds one valid move
+		for(int move : moves){
+			if (!available){
+				available = swipe(move, false);
+			}
+		}
+		return available;
+	}
 }

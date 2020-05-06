@@ -1,54 +1,20 @@
 import java.util.*;
-import javax.swing.JOptionPane;
+import javax.swing.JFrame;
 
 public class Game {
     /* The 2048 Game, Creates a board and receives user input */
-    private boolean gameContinue;
-    Board board;
+    private static Board board;
+    private static int boardSize = 4;
 
-    Game(){
-        this.gameContinue = true;
-        board = new Board(4);
-        // continues until game ends
-        while(gameContinue){
-            turn();
-        }
-    }
-
-    private void setGameContinue(boolean val){ this.gameContinue = val; }
-
-    private void turn(){
-        // does one turn
-        board.add_tile();       // add random tile
-        System.out.println(board.boardBuilder(4));      // shows user
-
-        // gets user input
-        System.out.println("Move:");
-        String move = "";
-        String[] movements = {"W", "A", "S", "D"};
-        List<String> validMoves = new ArrayList<String>();
-
-        // check valid moves
-        for(String direction: movements){
-            // add move to validMoves list if valid
-            if(board.swipe(direction, false)){ validMoves.add(direction); }
-        }
-
-        if(validMoves.isEmpty()){
-            // game lost
-            System.out.println("GAME OVER");
-            this.setGameContinue(false);
-        } else {
-            // loop until valid
-            while(!validMoves.contains(move)){
-                Scanner scanner = new Scanner(System.in);
-                move = scanner.nextLine().toUpperCase();
-                if(!validMoves.contains(move)){
-                    System.out.println("The valid moves are: " + String.join(", ", validMoves));
-                }
-            }
-            // apply swipe
-            board.swipe(move, true);
-        }
+    public static void main(String[] args){
+        board = new Board(boardSize);
+        
+        JFrame gameFrame = new JFrame("2048");
+        gameFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        
+        gameFrame.getContentPane().add(new BoardPanel(board));
+        
+        gameFrame.pack();
+        gameFrame.setVisible(true);
     }
 }
